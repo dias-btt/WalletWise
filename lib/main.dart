@@ -1,42 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:isar_community/isar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wallet_wise/app.dart';
+import 'package:wallet_wise/core/config/env.dart';
+import 'package:wallet_wise/core/database/collections/app_metadata.dart';
+import 'package:wallet_wise/injection_container.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  await SentryFlutter.init(
+    (SentryFlutterOptions options) {
+      options.dsn = Env.sentryDsn;
+      options.environment = Env.environment;
+      options.tracesSampleRate = 1.0;
+    },
+    appRunner: () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: '.env');
+      await Supabase.initialize(
+        url: Env.supabaseUrl,
+        publishableKey: Env.supabaseAnonKey,
+      );
 
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    publishableKey: dotenv.env['SUPABASE_PUBLISHABLE_KEY']!,
+      final Isar isar = await _initializeIsar();
+      registerIsarInstance(isar);
+
+      await configureDependencies();
+
+      runApp(
+        SentryWidget(
+          child: const App(),
+        ),
+      );
+    },
   );
-
-  runApp(const WalletWiseApp());
 }
 
-class WalletWiseApp extends StatelessWidget {
-  const WalletWiseApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WalletWise',
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('WalletWise'),
-        ),
-        body: const Center(
-          child: Text(
-            'WalletWise',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+Future<Isar> _initializeIsar() async {
+  final directory = await getApplicationDocumentsDirectory();
+  return Isar.open(
+    [AppMetadataSchema],
+    directory: directory.path,
+    name: 'wallet_wise',
+  );
 }
