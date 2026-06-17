@@ -15,6 +15,10 @@ final class AuthException extends AppException {
   const AuthException({required super.message});
 }
 
+final class AuthAppException extends AppException {
+  const AuthAppException({required super.message});
+}
+
 final class CacheException extends AppException {
   const CacheException({required super.message});
 }
