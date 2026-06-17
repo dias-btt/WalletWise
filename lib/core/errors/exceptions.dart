@@ -1,4 +1,4 @@
-sealed class AppException implements Exception {
+abstract class AppException implements Exception {
   const AppException({required this.message});
 
   final String message;
@@ -17,10 +17,6 @@ final class AuthException extends AppException {
 
 final class CacheException extends AppException {
   const CacheException({required super.message});
-}
-
-final class ValidationException extends AppException {
-  const ValidationException({required super.message});
 }
 
 final class UnexpectedException extends AppException {
