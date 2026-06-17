@@ -5,8 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:injectable/injectable.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wallet_wise/core/router/app_routes.dart';
-import 'package:wallet_wise/core/router/app_shell_scaffold.dart' show AppShellScaffold;
+import 'package:wallet_wise/core/router/app_shell_scaffold.dart'
+    show AppShellScaffold;
 import 'package:wallet_wise/core/router/placeholder_page.dart';
+import 'package:wallet_wise/features/auth/presentation/pages/login_page.dart';
+import 'package:wallet_wise/features/auth/presentation/pages/register_page.dart';
+import 'package:wallet_wise/features/auth/presentation/pages/splash_page.dart';
+import 'package:wallet_wise/features/profile/presentation/pages/profile_page.dart';
 
 @lazySingleton
 class AppRouter {
@@ -15,15 +20,30 @@ class AppRouter {
   final SupabaseClient _supabaseClient;
 
   late final GoRouter router = GoRouter(
-    initialLocation: AppRoutes.home,
+    initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
     redirect: _redirect,
     refreshListenable: _AuthRefreshListenable(_supabaseClient.auth),
     routes: <RouteBase>[
       GoRoute(
+        path: AppRoutes.splash,
+        builder: (BuildContext context, GoRouterState state) =>
+            const SplashPage(),
+      ),
+      GoRoute(
         path: AppRoutes.login,
         builder: (BuildContext context, GoRouterState state) =>
-            placeholderPage('Login'),
+            const LoginPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (BuildContext context, GoRouterState state) =>
+            const RegisterPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (BuildContext context, GoRouterState state) =>
+            placeholderPage('Forgot Password'),
       ),
       StatefulShellRoute.indexedStack(
         builder: (
@@ -66,7 +86,7 @@ class AppRouter {
               GoRoute(
                 path: AppRoutes.profile,
                 builder: (BuildContext context, GoRouterState state) =>
-                    placeholderPage('Profile'),
+                    const ProfilePage(),
               ),
             ],
           ),
@@ -79,13 +99,18 @@ class AppRouter {
     final bool isAuthenticated =
         _supabaseClient.auth.currentSession != null;
     final String location = state.matchedLocation;
-    final bool isLoggingIn = location == AppRoutes.login;
 
-    if (!isAuthenticated && !isLoggingIn) {
+    if (location == AppRoutes.splash) {
+      return null;
+    }
+
+    final bool isOnAuthRoute = AppRoutes.isAuthRoute(location);
+
+    if (!isAuthenticated && !isOnAuthRoute) {
       return AppRoutes.login;
     }
 
-    if (isAuthenticated && isLoggingIn) {
+    if (isAuthenticated && isOnAuthRoute) {
       return AppRoutes.home;
     }
 
