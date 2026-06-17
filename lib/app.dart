@@ -1,43 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:wallet_wise/core/router/app_router.dart';
+import 'package:wallet_wise/core/theme/app_theme.dart';
+import 'package:wallet_wise/injection_container.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final AppRouter appRouter = getIt<AppRouter>();
+
     return MaterialApp.router(
       title: 'WalletWise',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF14213D),
-        ),
-        useMaterial3: true,
-      ),
-      routerConfig: _router,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      routerConfig: appRouter.router,
     );
   }
 }
-
-final GoRouter _router = GoRouter(
-  initialLocation: '/',
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (BuildContext context, GoRouterState state) {
-        return const Scaffold(
-          body: Center(
-            child: Text(
-              'WalletWise',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        );
-      },
-    ),
-  ],
-);

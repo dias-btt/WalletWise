@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:get_it/get_it.dart';
 import 'package:injectable/injectable.dart';
 import 'package:isar_community/isar.dart';
@@ -23,6 +24,9 @@ Future<void> configureDependencies() async {
 abstract class AppModule {
   @lazySingleton
   SupabaseClient supabaseClient() => Supabase.instance.client;
+
+  @lazySingleton
+  Connectivity connectivity() => Connectivity();
 
   @preResolve
   @singleton
