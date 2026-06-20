@@ -33,6 +33,30 @@ import 'package:wallet_wise/features/auth/domain/usecases/sign_up_usecase.dart'
     as _i963;
 import 'package:wallet_wise/features/auth/presentation/bloc/auth_bloc.dart'
     as _i650;
+import 'package:wallet_wise/features/transactions/data/datasources/category_remote_datasource.dart'
+    as _i484;
+import 'package:wallet_wise/features/transactions/data/datasources/transaction_local_datasource.dart'
+    as _i283;
+import 'package:wallet_wise/features/transactions/data/datasources/transaction_remote_datasource.dart'
+    as _i33;
+import 'package:wallet_wise/features/transactions/domain/repositories/category_repository.dart'
+    as _i688;
+import 'package:wallet_wise/features/transactions/domain/repositories/transaction_repository.dart'
+    as _i58;
+import 'package:wallet_wise/features/transactions/domain/usecases/add_transaction_usecase.dart'
+    as _i401;
+import 'package:wallet_wise/features/transactions/domain/usecases/delete_transaction_usecase.dart'
+    as _i128;
+import 'package:wallet_wise/features/transactions/domain/usecases/get_categories_usecase.dart'
+    as _i314;
+import 'package:wallet_wise/features/transactions/domain/usecases/get_transactions_usecase.dart'
+    as _i276;
+import 'package:wallet_wise/features/transactions/domain/usecases/update_transaction_usecase.dart'
+    as _i433;
+import 'package:wallet_wise/features/transactions/presentation/bloc/transaction_bloc.dart'
+    as _i936;
+import 'package:wallet_wise/features/transactions/transactions_module.dart'
+    as _i1017;
 import 'package:wallet_wise/injection_container.dart' as _i244;
 
 extension GetItInjectableX on _i174.GetIt {
@@ -43,6 +67,7 @@ extension GetItInjectableX on _i174.GetIt {
   }) async {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final appModule = _$AppModule();
+    final transactionsModule = _$TransactionsModule();
     final authModule = _$AuthModule();
     await gh.singletonAsync<_i460.SharedPreferences>(
       () => appModule.prefs(),
@@ -54,14 +79,24 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i484.DioClient>(
       () => _i484.DioClient.create(gh<_i454.SupabaseClient>()),
     );
+    gh.lazySingleton<_i484.CategoryRemoteDatasource>(
+      () => transactionsModule.categoryRemoteDatasource(
+        gh<_i454.SupabaseClient>(),
+      ),
+    );
     gh.lazySingleton<_i4.NetworkInfo>(
       () => _i4.NetworkInfo(gh<_i895.Connectivity>()),
     );
-    gh.lazySingleton<_i558.AppRouter>(
-      () => _i558.AppRouter(gh<_i454.SupabaseClient>()),
-    );
     gh.lazySingleton<_i991.AuthRemoteDatasource>(
       () => authModule.authRemoteDatasource(gh<_i454.SupabaseClient>()),
+    );
+    gh.lazySingleton<_i33.TransactionRemoteDatasource>(
+      () => transactionsModule.transactionRemoteDatasource(
+        gh<_i454.SupabaseClient>(),
+      ),
+    );
+    gh.lazySingleton<_i558.AppRouter>(
+      () => _i558.AppRouter(gh<_i454.SupabaseClient>()),
     );
     gh.lazySingleton<_i666.AuthRepository>(
       () => authModule.authRepository(gh<_i991.AuthRemoteDatasource>()),
@@ -78,6 +113,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i545.GetCurrentUserUseCase>(
       () => authModule.getCurrentUserUseCase(gh<_i666.AuthRepository>()),
     );
+    gh.lazySingleton<_i283.TransactionLocalDatasource>(
+      () => transactionsModule.transactionLocalDatasource(gh<_i214.Isar>()),
+    );
     gh.lazySingleton<_i650.AuthBloc>(
       () => authModule.authBloc(
         gh<_i1019.SignInUseCase>(),
@@ -87,10 +125,58 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i666.AuthRepository>(),
       ),
     );
+    gh.lazySingleton<_i688.CategoryRepository>(
+      () => transactionsModule.categoryRepository(
+        gh<_i484.CategoryRemoteDatasource>(),
+      ),
+    );
+    gh.lazySingleton<_i58.TransactionRepository>(
+      () => transactionsModule.transactionRepository(
+        gh<_i33.TransactionRemoteDatasource>(),
+        gh<_i283.TransactionLocalDatasource>(),
+        gh<_i4.NetworkInfo>(),
+      ),
+    );
+    gh.factory<_i314.GetCategoriesUseCase>(
+      () => transactionsModule.getCategoriesUseCase(
+        gh<_i688.CategoryRepository>(),
+      ),
+    );
+    gh.factory<_i276.GetTransactionsUseCase>(
+      () => transactionsModule.getTransactionsUseCase(
+        gh<_i58.TransactionRepository>(),
+      ),
+    );
+    gh.factory<_i401.AddTransactionUseCase>(
+      () => transactionsModule.addTransactionUseCase(
+        gh<_i58.TransactionRepository>(),
+      ),
+    );
+    gh.factory<_i433.UpdateTransactionUseCase>(
+      () => transactionsModule.updateTransactionUseCase(
+        gh<_i58.TransactionRepository>(),
+      ),
+    );
+    gh.factory<_i128.DeleteTransactionUseCase>(
+      () => transactionsModule.deleteTransactionUseCase(
+        gh<_i58.TransactionRepository>(),
+      ),
+    );
+    gh.lazySingleton<_i936.TransactionBloc>(
+      () => transactionsModule.transactionBloc(
+        gh<_i276.GetTransactionsUseCase>(),
+        gh<_i401.AddTransactionUseCase>(),
+        gh<_i433.UpdateTransactionUseCase>(),
+        gh<_i128.DeleteTransactionUseCase>(),
+        gh<_i314.GetCategoriesUseCase>(),
+      ),
+    );
     return this;
   }
 }
 
 class _$AppModule extends _i244.AppModule {}
+
+class _$TransactionsModule extends _i1017.TransactionsModule {}
 
 class _$AuthModule extends _i1022.AuthModule {}
