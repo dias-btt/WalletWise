@@ -43,10 +43,22 @@ import 'package:wallet_wise/features/auth/domain/usecases/sign_up_usecase.dart'
 import 'package:wallet_wise/features/auth/presentation/bloc/auth_bloc.dart'
     as _i650;
 import 'package:wallet_wise/features/budgets/budgets_module.dart' as _i541;
+import 'package:wallet_wise/features/budgets/data/datasources/budget_local_datasource.dart'
+    as _i380;
 import 'package:wallet_wise/features/budgets/data/datasources/budget_remote_datasource.dart'
     as _i831;
 import 'package:wallet_wise/features/budgets/domain/repositories/budget_repository.dart'
     as _i890;
+import 'package:wallet_wise/features/budgets/domain/usecases/create_budget_usecase.dart'
+    as _i838;
+import 'package:wallet_wise/features/budgets/domain/usecases/deactivate_budget_usecase.dart'
+    as _i753;
+import 'package:wallet_wise/features/budgets/domain/usecases/get_budgets_with_progress_usecase.dart'
+    as _i579;
+import 'package:wallet_wise/features/budgets/domain/usecases/update_budget_usecase.dart'
+    as _i373;
+import 'package:wallet_wise/features/budgets/presentation/bloc/budget_bloc.dart'
+    as _i66;
 import 'package:wallet_wise/features/dashboard/dashboard_module.dart' as _i829;
 import 'package:wallet_wise/features/dashboard/presentation/bloc/dashboard_bloc.dart'
     as _i768;
@@ -85,9 +97,9 @@ extension GetItInjectableX on _i174.GetIt {
     final gh = _i526.GetItHelper(this, environment, environmentFilter);
     final appModule = _$AppModule();
     final accountsModule = _$AccountsModule();
+    final budgetsModule = _$BudgetsModule();
     final transactionsModule = _$TransactionsModule();
     final authModule = _$AuthModule();
-    final budgetsModule = _$BudgetsModule();
     final dashboardModule = _$DashboardModule();
     await gh.singletonAsync<_i460.SharedPreferences>(
       () => appModule.prefs(),
@@ -101,6 +113,9 @@ extension GetItInjectableX on _i174.GetIt {
     );
     gh.lazySingleton<_i465.AccountLocalDatasource>(
       () => accountsModule.accountLocalDatasource(gh<_i214.Isar>()),
+    );
+    gh.lazySingleton<_i380.BudgetLocalDatasource>(
+      () => budgetsModule.budgetLocalDatasource(gh<_i214.Isar>()),
     );
     gh.lazySingleton<_i484.CategoryRemoteDatasource>(
       () => transactionsModule.categoryRemoteDatasource(
@@ -119,12 +134,6 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i33.TransactionRemoteDatasource>(
       () => transactionsModule.transactionRemoteDatasource(
         gh<_i454.SupabaseClient>(),
-      ),
-    );
-    gh.lazySingleton<_i890.BudgetRepository>(
-      () => budgetsModule.budgetRepository(
-        gh<_i831.BudgetRemoteDatasource>(),
-        gh<_i4.NetworkInfo>(),
       ),
     );
     gh.lazySingleton<_i558.AppRouter>(
@@ -158,6 +167,13 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i283.TransactionLocalDatasource>(
       () => transactionsModule.transactionLocalDatasource(gh<_i214.Isar>()),
     );
+    gh.lazySingleton<_i890.BudgetRepository>(
+      () => budgetsModule.budgetRepository(
+        gh<_i831.BudgetRemoteDatasource>(),
+        gh<_i380.BudgetLocalDatasource>(),
+        gh<_i4.NetworkInfo>(),
+      ),
+    );
     gh.lazySingleton<_i650.AuthBloc>(
       () => authModule.authBloc(
         gh<_i1019.SignInUseCase>(),
@@ -174,6 +190,20 @@ extension GetItInjectableX on _i174.GetIt {
       () => transactionsModule.categoryRepository(
         gh<_i484.CategoryRemoteDatasource>(),
       ),
+    );
+    gh.factory<_i579.GetBudgetsWithProgressUseCase>(
+      () => budgetsModule.getBudgetsWithProgressUseCase(
+        gh<_i890.BudgetRepository>(),
+      ),
+    );
+    gh.factory<_i838.CreateBudgetUseCase>(
+      () => budgetsModule.createBudgetUseCase(gh<_i890.BudgetRepository>()),
+    );
+    gh.factory<_i373.UpdateBudgetUseCase>(
+      () => budgetsModule.updateBudgetUseCase(gh<_i890.BudgetRepository>()),
+    );
+    gh.factory<_i753.DeactivateBudgetUseCase>(
+      () => budgetsModule.deactivateBudgetUseCase(gh<_i890.BudgetRepository>()),
     );
     gh.lazySingleton<_i58.TransactionRepository>(
       () => transactionsModule.transactionRepository(
@@ -211,7 +241,16 @@ extension GetItInjectableX on _i174.GetIt {
       () => dashboardModule.dashboardBloc(
         gh<_i474.AccountRepository>(),
         gh<_i58.TransactionRepository>(),
-        gh<_i890.BudgetRepository>(),
+        gh<_i579.GetBudgetsWithProgressUseCase>(),
+        gh<_i314.GetCategoriesUseCase>(),
+      ),
+    );
+    gh.lazySingleton<_i66.BudgetBloc>(
+      () => budgetsModule.budgetBloc(
+        gh<_i579.GetBudgetsWithProgressUseCase>(),
+        gh<_i838.CreateBudgetUseCase>(),
+        gh<_i753.DeactivateBudgetUseCase>(),
+        gh<_i314.GetCategoriesUseCase>(),
       ),
     );
     gh.lazySingleton<_i936.TransactionBloc>(
@@ -231,10 +270,10 @@ class _$AppModule extends _i244.AppModule {}
 
 class _$AccountsModule extends _i483.AccountsModule {}
 
+class _$BudgetsModule extends _i541.BudgetsModule {}
+
 class _$TransactionsModule extends _i1017.TransactionsModule {}
 
 class _$AuthModule extends _i1022.AuthModule {}
-
-class _$BudgetsModule extends _i541.BudgetsModule {}
 
 class _$DashboardModule extends _i829.DashboardModule {}

@@ -4,20 +4,27 @@ import 'package:wallet_wise/core/errors/failures.dart';
 import 'package:wallet_wise/features/accounts/domain/entities/account.dart';
 import 'package:wallet_wise/features/accounts/domain/repositories/account_repository.dart';
 import 'package:wallet_wise/features/budgets/domain/entities/budget_ring_summary.dart';
-import 'package:wallet_wise/features/budgets/domain/repositories/budget_repository.dart';
+import 'package:wallet_wise/features/budgets/domain/entities/budget_with_progress.dart';
+import 'package:wallet_wise/features/budgets/domain/usecases/get_budgets_with_progress_usecase.dart';
+import 'package:wallet_wise/features/budgets/domain/utils/budget_ring_mapper.dart';
 import 'package:wallet_wise/features/dashboard/presentation/bloc/dashboard_event.dart';
 import 'package:wallet_wise/features/dashboard/presentation/bloc/dashboard_state.dart';
+import 'package:wallet_wise/features/transactions/domain/entities/category.dart';
 import 'package:wallet_wise/features/transactions/domain/entities/transaction.dart';
 import 'package:wallet_wise/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:wallet_wise/features/transactions/domain/usecases/get_categories_usecase.dart';
+import 'package:wallet_wise/shared/domain/usecase.dart';
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   DashboardBloc({
     required AccountRepository accountRepository,
     required TransactionRepository transactionRepository,
-    required BudgetRepository budgetRepository,
+    required GetBudgetsWithProgressUseCase getBudgetsWithProgressUseCase,
+    required GetCategoriesUseCase getCategoriesUseCase,
   })  : _accountRepository = accountRepository,
         _transactionRepository = transactionRepository,
-        _budgetRepository = budgetRepository,
+        _getBudgetsWithProgressUseCase = getBudgetsWithProgressUseCase,
+        _getCategoriesUseCase = getCategoriesUseCase,
         super(const DashboardInitial()) {
     on<DashboardStarted>(_onDashboardStarted);
     on<DashboardRefreshed>(_onDashboardRefreshed);
@@ -25,7 +32,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
   final AccountRepository _accountRepository;
   final TransactionRepository _transactionRepository;
-  final BudgetRepository _budgetRepository;
+  final GetBudgetsWithProgressUseCase _getBudgetsWithProgressUseCase;
+  final GetCategoriesUseCase _getCategoriesUseCase;
 
   String _userId = '';
 
@@ -61,8 +69,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         await _accountRepository.getTotalBalance(_userId);
     final Either<Failure, List<Transaction>> transactionsResult =
         await _transactionRepository.getRecentTransactions(limit: 5);
-    final Either<Failure, List<BudgetRingSummary>> budgetsResult =
-        await _budgetRepository.getActiveBudgetsSummary(_userId);
+    final Either<Failure, List<BudgetWithProgress>> budgetsResult =
+        await _getBudgetsWithProgressUseCase(
+      GetBudgetsWithProgressParams(userId: _userId),
+    );
+    final Either<Failure, List<Category>> categoriesResult =
+        await _getCategoriesUseCase(const NoParams());
 
     if (accountsResult.isLeft() && transactionsResult.isLeft()) {
       final Failure failure = accountsResult.fold(
@@ -83,8 +95,23 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     });
     final List<Transaction> recentTransactions =
         transactionsResult.getOrElse((_) => <Transaction>[]);
-    final List<BudgetRingSummary> budgetRings =
-        budgetsResult.getOrElse((_) => <BudgetRingSummary>[]);
+    final List<BudgetWithProgress> budgetsWithProgress =
+        budgetsResult.getOrElse((_) => <BudgetWithProgress>[]);
+    final List<Category> categories =
+        categoriesResult.getOrElse((_) => <Category>[]);
+
+    final List<BudgetRingSummary> budgetRings = budgetsWithProgress
+        .map((BudgetWithProgress budget) {
+          Category? category;
+          for (final Category item in categories) {
+            if (item.id == budget.categoryId) {
+              category = item;
+              break;
+            }
+          }
+          return budgetWithProgressToRingSummary(budget, category);
+        })
+        .toList();
 
     final String currencyCode = accounts.isNotEmpty
         ? accounts.firstWhere(

@@ -72,6 +72,7 @@ dependencies:
   sentry_flutter: ^8.14.2
 
 dev_dependencies:
+  sentry_dart_plugin: ^3.4.0
   flutter_test:
     sdk: flutter
 
@@ -100,3 +101,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+sentry:
+  upload_debug_symbols: true
+  upload_source_maps: true
+  project: flutter
+  org: dias-btt

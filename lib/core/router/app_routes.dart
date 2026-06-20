@@ -15,6 +15,8 @@ abstract final class AppRoutes {
   // Standalone routes
   static const String budgets = '/budgets';
 
+  static String budgetDetail(String budgetId) => '$budgets/$budgetId';
+
   static const List<String> shellRoutes = <String>[
     dashboard,
     transactions,

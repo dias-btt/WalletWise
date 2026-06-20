@@ -10,6 +10,8 @@ import 'package:wallet_wise/core/router/placeholder_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/login_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/register_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/splash_page.dart';
+import 'package:wallet_wise/features/budgets/presentation/bloc/budget_bloc.dart';
+import 'package:wallet_wise/features/budgets/presentation/pages/budget_detail_page.dart';
 import 'package:wallet_wise/features/budgets/presentation/pages/budgets_page.dart';
 import 'package:wallet_wise/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:wallet_wise/features/profile/presentation/pages/profile_page.dart';
@@ -59,7 +61,24 @@ class AppRouter {
         path: AppRoutes.budgets,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (BuildContext context, GoRouterState state) =>
-            const BudgetsPage(),
+            BlocProvider<BudgetBloc>.value(
+              value: getIt<BudgetBloc>(),
+              child: const BudgetsPage(),
+            ),
+        routes: <RouteBase>[
+          GoRoute(
+            path: ':id',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (BuildContext context, GoRouterState state) {
+              final BudgetDetailArgs args =
+                  state.extra! as BudgetDetailArgs;
+              return BlocProvider<BudgetBloc>.value(
+                value: getIt<BudgetBloc>(),
+                child: BudgetDetailPage(args: args),
+              );
+            },
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (

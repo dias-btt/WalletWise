@@ -1,9 +1,23 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wallet_wise/core/errors/exceptions.dart';
-import 'package:wallet_wise/features/budgets/domain/entities/budget_ring_summary.dart';
+import 'package:wallet_wise/features/budgets/data/models/budget_model.dart';
+import 'package:wallet_wise/features/budgets/data/models/spending_by_category_model.dart';
+import 'package:wallet_wise/features/budgets/domain/entities/budget.dart';
 
 abstract class BudgetRemoteDatasource {
-  Future<List<BudgetRingSummary>> getActiveBudgetsSummary(String userId);
+  Future<List<BudgetModel>> getActiveBudgets(String userId);
+
+  Future<BudgetModel> createBudget(Budget budget);
+
+  Future<BudgetModel> updateBudget(Budget budget);
+
+  Future<void> deactivateBudget(String budgetId);
+
+  Future<List<SpendingByCategoryModel>> getSpendingByCategory({
+    required String userId,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+  });
 }
 
 class BudgetRemoteDatasourceImpl implements BudgetRemoteDatasource {
@@ -12,64 +26,22 @@ class BudgetRemoteDatasourceImpl implements BudgetRemoteDatasource {
   final SupabaseClient _client;
 
   static const String _budgetsTable = 'budgets';
-  static const String _transactionsTable = 'transactions';
-
-  static const String _selectWithCategory =
-      '*, categories(name, icon_name, color_hex)';
 
   @override
-  Future<List<BudgetRingSummary>> getActiveBudgetsSummary(
-    String userId,
-  ) async {
+  Future<List<BudgetModel>> getActiveBudgets(String userId) async {
     try {
-      final DateTime now = DateTime.now();
-      final DateTime periodStart = DateTime(now.year, now.month);
-      final DateTime periodEnd = DateTime(now.year, now.month + 1);
-
-      final List<dynamic> budgetsResponse = await _client
+      final List<dynamic> response = await _client
           .from(_budgetsTable)
-          .select(_selectWithCategory)
+          .select()
           .eq('user_id', userId)
           .eq('is_active', true);
 
-      if (budgetsResponse.isEmpty) {
-        return const <BudgetRingSummary>[];
-      }
-
-      final List<dynamic> transactionsResponse = await _client
-          .from(_transactionsTable)
-          .select('category_id, amount')
-          .eq('type', 'expense')
-          .gte('date', periodStart.toIso8601String())
-          .lt('date', periodEnd.toIso8601String());
-
-      final Map<String, double> spentByCategory = <String, double>{};
-      for (final dynamic row in transactionsResponse) {
-        final Map<String, dynamic> map = row as Map<String, dynamic>;
-        final String? categoryId = map['category_id'] as String?;
-        if (categoryId == null) {
-          continue;
-        }
-        final double amount = _parseAmount(map['amount']);
-        spentByCategory[categoryId] =
-            (spentByCategory[categoryId] ?? 0) + amount;
-      }
-
-      return budgetsResponse.map((dynamic row) {
-        final Map<String, dynamic> budget = row as Map<String, dynamic>;
-        final Map<String, dynamic>? category =
-            budget['categories'] as Map<String, dynamic>?;
-        final String categoryId = budget['category_id'] as String;
-        final double limit = _parseAmount(budget['limit_amount']);
-
-        return BudgetRingSummary(
-          categoryName: category?['name'] as String? ?? 'Budget',
-          spent: spentByCategory[categoryId] ?? 0,
-          limit: limit,
-          colorHex: category?['color_hex'] as String? ?? '14213D',
-          categoryIconName: category?['icon_name'] as String?,
-        );
-      }).toList();
+      return response
+          .map(
+            (dynamic row) =>
+                BudgetModel.fromJson(row as Map<String, dynamic>),
+          )
+          .toList();
     } on PostgrestException catch (error) {
       throw NetworkException(message: error.message);
     } catch (error) {
@@ -77,13 +49,89 @@ class BudgetRemoteDatasourceImpl implements BudgetRemoteDatasource {
     }
   }
 
-  double _parseAmount(dynamic value) {
-    if (value is num) {
-      return value.toDouble();
+  @override
+  Future<BudgetModel> createBudget(Budget budget) async {
+    try {
+      final Map<String, dynamic> payload = budgetToSupabaseJson(budget)
+        ..remove('id');
+
+      final Map<String, dynamic> response = await _client
+          .from(_budgetsTable)
+          .insert(payload)
+          .select()
+          .single();
+
+      return BudgetModel.fromJson(response);
+    } on PostgrestException catch (error) {
+      throw NetworkException(message: error.message);
+    } catch (error) {
+      throw UnexpectedException(message: error.toString());
     }
-    if (value is String) {
-      return double.tryParse(value) ?? 0;
+  }
+
+  @override
+  Future<BudgetModel> updateBudget(Budget budget) async {
+    try {
+      final Map<String, dynamic> response = await _client
+          .from(_budgetsTable)
+          .update(budgetToSupabaseJson(budget)..remove('id'))
+          .eq('id', budget.id)
+          .select()
+          .single();
+
+      return BudgetModel.fromJson(response);
+    } on PostgrestException catch (error) {
+      throw NetworkException(message: error.message);
+    } catch (error) {
+      throw UnexpectedException(message: error.toString());
     }
-    return 0;
+  }
+
+  @override
+  Future<void> deactivateBudget(String budgetId) async {
+    try {
+      await _client
+          .from(_budgetsTable)
+          .update(<String, dynamic>{'is_active': false})
+          .eq('id', budgetId);
+    } on PostgrestException catch (error) {
+      throw NetworkException(message: error.message);
+    } catch (error) {
+      throw UnexpectedException(message: error.toString());
+    }
+  }
+
+  @override
+  Future<List<SpendingByCategoryModel>> getSpendingByCategory({
+    required String userId,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+  }) async {
+    try {
+      final List<dynamic> response = await _client.rpc(
+        'get_spending_by_category',
+        params: <String, dynamic>{
+          'p_user_id': userId,
+          'p_start': _formatDate(periodStart),
+          'p_end': _formatDate(periodEnd),
+        },
+      );
+
+      return response
+          .map(
+            (dynamic row) => SpendingByCategoryModel.fromJson(
+              row as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    } on PostgrestException catch (error) {
+      throw NetworkException(message: error.message);
+    } catch (error) {
+      throw UnexpectedException(message: error.toString());
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day).toIso8601String();
   }
 }
