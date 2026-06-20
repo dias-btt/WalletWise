@@ -5,16 +5,18 @@ import 'package:go_router/go_router.dart';
 import 'package:injectable/injectable.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wallet_wise/core/router/app_routes.dart';
-import 'package:wallet_wise/core/router/app_shell_scaffold.dart'
-    show AppShellScaffold;
+import 'package:wallet_wise/core/router/main_shell.dart';
 import 'package:wallet_wise/core/router/placeholder_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/login_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/register_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/splash_page.dart';
+import 'package:wallet_wise/features/budgets/presentation/pages/budgets_page.dart';
+import 'package:wallet_wise/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:wallet_wise/features/profile/presentation/pages/profile_page.dart';
 import 'package:wallet_wise/features/transactions/presentation/pages/transactions_page.dart';
 import 'package:wallet_wise/injection_container.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:wallet_wise/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:wallet_wise/features/transactions/presentation/bloc/transaction_bloc.dart';
 
 @lazySingleton
@@ -23,7 +25,11 @@ class AppRouter {
 
   final SupabaseClient _supabaseClient;
 
+  final GlobalKey<NavigatorState> _rootNavigatorKey =
+      GlobalKey<NavigatorState>();
+
   late final GoRouter router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
     redirect: _redirect,
@@ -49,21 +55,30 @@ class AppRouter {
         builder: (BuildContext context, GoRouterState state) =>
             placeholderPage('Forgot Password'),
       ),
+      GoRoute(
+        path: AppRoutes.budgets,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (BuildContext context, GoRouterState state) =>
+            const BudgetsPage(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (
           BuildContext context,
           GoRouterState state,
           StatefulNavigationShell navigationShell,
         ) {
-          return AppShellScaffold(navigationShell: navigationShell);
+          return MainShell(navigationShell: navigationShell);
         },
         branches: <StatefulShellBranch>[
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.home,
+                path: AppRoutes.dashboard,
                 builder: (BuildContext context, GoRouterState state) =>
-                    placeholderPage('Home'),
+                    BlocProvider<DashboardBloc>.value(
+                      value: getIt<DashboardBloc>(),
+                      child: const DashboardPage(),
+                    ),
               ),
             ],
           ),
@@ -82,16 +97,25 @@ class AppRouter {
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.budgets,
+                path: AppRoutes.analytics,
                 builder: (BuildContext context, GoRouterState state) =>
-                    placeholderPage('Budgets'),
+                    placeholderPage('Analytics'),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoutes.profile,
+                path: AppRoutes.goals,
+                builder: (BuildContext context, GoRouterState state) =>
+                    placeholderPage('Goals'),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.settings,
                 builder: (BuildContext context, GoRouterState state) =>
                     const ProfilePage(),
               ),
@@ -118,7 +142,7 @@ class AppRouter {
     }
 
     if (isAuthenticated && isOnAuthRoute) {
-      return AppRoutes.home;
+      return AppRoutes.dashboard;
     }
 
     return null;

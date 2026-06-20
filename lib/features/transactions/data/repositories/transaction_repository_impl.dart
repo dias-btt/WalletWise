@@ -95,6 +95,81 @@ class TransactionRepositoryImpl implements TransactionRepository {
   }
 
   @override
+  Future<Either<Failure, List<Transaction>>> getRecentTransactions({
+    required int limit,
+  }) async {
+    const String cacheKey = 'recent_transactions';
+
+    try {
+      final List<TransactionModel>? cached =
+          await _localDatasource.getCachedTransactions(
+        cacheKey: '$cacheKey|$limit',
+        accountId: '',
+        offset: 0,
+        limit: limit,
+      );
+
+      if (cached != null) {
+        return Right<Failure, List<Transaction>>(
+          cached.map((TransactionModel model) => model.toEntity()).toList(),
+        );
+      }
+
+      final bool connected = await _networkInfo.isConnected;
+      if (!connected) {
+        final List<TransactionModel>? stale = await _localDatasource.getStaleCache(
+          accountId: '',
+          offset: 0,
+          limit: limit,
+        );
+
+        if (stale != null) {
+          return Right<Failure, List<Transaction>>(
+            stale.map((TransactionModel model) => model.toEntity()).toList(),
+          );
+        }
+
+        return const Left<Failure, List<Transaction>>(
+          NetworkFailure(message: 'No internet connection'),
+        );
+      }
+
+      final List<TransactionModel> remote =
+          await _remoteDatasource.getRecentTransactions(limit: limit);
+
+      await _localDatasource.cacheTransactions(
+        cacheKey: '$cacheKey|$limit',
+        transactions: remote,
+      );
+
+      return Right<Failure, List<Transaction>>(
+        remote.map((TransactionModel model) => model.toEntity()).toList(),
+      );
+    } on AppException catch (error) {
+      final bool connected = await _networkInfo.isConnected;
+      if (!connected) {
+        final List<TransactionModel>? stale = await _localDatasource.getStaleCache(
+          accountId: '',
+          offset: 0,
+          limit: limit,
+        );
+
+        if (stale != null) {
+          return Right<Failure, List<Transaction>>(
+            stale.map((TransactionModel model) => model.toEntity()).toList(),
+          );
+        }
+      }
+
+      return Left<Failure, List<Transaction>>(_mapAppException(error));
+    } catch (error) {
+      return Left<Failure, List<Transaction>>(
+        UnexpectedFailure(message: error.toString()),
+      );
+    }
+  }
+
+  @override
   Future<Either<Failure, Transaction>> addTransaction(
     Transaction transaction,
   ) async {

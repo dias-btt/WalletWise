@@ -6,16 +6,21 @@ abstract final class AppRoutes {
   static const String forgotPassword = '/auth/forgot';
 
   // Shell tabs
-  static const String home = '/home';
+  static const String dashboard = '/dashboard';
   static const String transactions = '/transactions';
+  static const String analytics = '/analytics';
+  static const String goals = '/goals';
+  static const String settings = '/settings';
+
+  // Standalone routes
   static const String budgets = '/budgets';
-  static const String profile = '/profile';
 
   static const List<String> shellRoutes = <String>[
-    home,
+    dashboard,
     transactions,
-    budgets,
-    profile,
+    analytics,
+    goals,
+    settings,
   ];
 
   static bool isAuthRoute(String location) => location.startsWith('/auth');
