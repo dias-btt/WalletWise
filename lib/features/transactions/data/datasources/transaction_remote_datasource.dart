@@ -14,6 +14,8 @@ abstract class TransactionRemoteDatasource {
   Future<void> deleteTransaction(String id);
 
   Future<String?> getDefaultAccountId();
+
+  Future<List<TransactionModel>> getRecentTransactions({required int limit});
 }
 
 class TransactionRemoteDatasourceImpl implements TransactionRemoteDatasource {
@@ -157,6 +159,28 @@ class TransactionRemoteDatasourceImpl implements TransactionRemoteDatasource {
       }
 
       return accountId;
+    } on PostgrestException catch (error) {
+      throw NetworkException(message: error.message);
+    } catch (error) {
+      throw UnexpectedException(message: error.toString());
+    }
+  }
+
+  @override
+  Future<List<TransactionModel>> getRecentTransactions({
+    required int limit,
+  }) async {
+    try {
+      final List<dynamic> response = await _client
+          .from(_table)
+          .select(_selectWithRelations)
+          .order('date', ascending: false)
+          .limit(limit);
+
+      return response
+          .cast<Map<String, dynamic>>()
+          .map(TransactionModel.fromJson)
+          .toList();
     } on PostgrestException catch (error) {
       throw NetworkException(message: error.message);
     } catch (error) {

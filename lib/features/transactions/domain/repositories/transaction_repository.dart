@@ -29,6 +29,10 @@ abstract class TransactionRepository {
     GetTransactionsParams params,
   );
 
+  Future<Either<Failure, List<Transaction>>> getRecentTransactions({
+    required int limit,
+  });
+
   Future<Either<Failure, Transaction>> addTransaction(Transaction transaction);
 
   Future<Either<Failure, Transaction>> updateTransaction(

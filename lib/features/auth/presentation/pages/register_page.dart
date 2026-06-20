@@ -117,7 +117,7 @@ class _RegisterPageState extends State<RegisterPage> {
           }
 
           if (state is Authenticated) {
-            context.go(AppRoutes.home);
+            context.go(AppRoutes.dashboard);
           }
         },
         builder: (BuildContext context, AuthState state) {

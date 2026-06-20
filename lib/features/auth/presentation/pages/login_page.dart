@@ -81,7 +81,7 @@ class _LoginPageState extends State<LoginPage> {
           }
 
           if (state is Authenticated) {
-            context.go(AppRoutes.home);
+            context.go(AppRoutes.dashboard);
           }
         },
         builder: (BuildContext context, AuthState state) {

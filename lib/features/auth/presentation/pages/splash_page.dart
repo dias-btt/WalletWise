@@ -47,7 +47,7 @@ class _SplashPageState extends State<SplashPage> {
     _navigationHandled = true;
 
     if (authState is Authenticated) {
-      context.go(AppRoutes.home);
+      context.go(AppRoutes.dashboard);
       return;
     }
 
