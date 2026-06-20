@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wallet_wise/app.dart';
 import 'package:wallet_wise/core/config/env.dart';
 import 'package:wallet_wise/core/database/collections/app_metadata.dart';
+import 'package:wallet_wise/features/transactions/data/isar/transaction_schema.dart';
 import 'package:wallet_wise/injection_container.dart';
 
 Future<void> main() async {
@@ -40,7 +41,10 @@ Future<void> main() async {
 Future<Isar> _initializeIsar() async {
   final directory = await getApplicationDocumentsDirectory();
   return Isar.open(
-    [AppMetadataSchema],
+    <CollectionSchema<dynamic>>[
+      AppMetadataSchema,
+      CachedTransactionSchema,
+    ],
     directory: directory.path,
     name: 'wallet_wise',
   );

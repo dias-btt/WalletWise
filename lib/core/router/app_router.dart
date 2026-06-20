@@ -12,6 +12,10 @@ import 'package:wallet_wise/features/auth/presentation/pages/login_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/register_page.dart';
 import 'package:wallet_wise/features/auth/presentation/pages/splash_page.dart';
 import 'package:wallet_wise/features/profile/presentation/pages/profile_page.dart';
+import 'package:wallet_wise/features/transactions/presentation/pages/transactions_page.dart';
+import 'package:wallet_wise/injection_container.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:wallet_wise/features/transactions/presentation/bloc/transaction_bloc.dart';
 
 @lazySingleton
 class AppRouter {
@@ -68,7 +72,10 @@ class AppRouter {
               GoRoute(
                 path: AppRoutes.transactions,
                 builder: (BuildContext context, GoRouterState state) =>
-                    placeholderPage('Transactions'),
+                    BlocProvider<TransactionBloc>.value(
+                      value: getIt<TransactionBloc>(),
+                      child: const TransactionsPage(),
+                    ),
               ),
             ],
           ),
